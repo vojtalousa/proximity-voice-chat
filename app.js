@@ -28,6 +28,11 @@ const listener = server.listen(port);
 const io = socketio(listener);
 
 io.on('connection', (socket) => {
-  console.log(socket.id, 'connected!');
-  socket.emit('joined!');
+  socket.on('peerReady', (peerId) => {
+    socket.broadcast.emit('peerIsReady', peerId);
+    socket.data.peerId = peerId;
+  });
+  socket.on('disconnect', () => {
+    socket.broadcast.emit('peerLeft', socket.data.peerId);
+  });
 });
