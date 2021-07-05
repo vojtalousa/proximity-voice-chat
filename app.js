@@ -26,3 +26,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 const server = http.createServer(app);
 const listener = server.listen(port);
 const io = socketio(listener);
+
+io.on('connection', (socket) => {
+  console.log(socket.id, 'connected!');
+  socket.emit('joined!');
+});
