@@ -1,17 +1,40 @@
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <title>Express</title>
-  <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/stylesheets/index.css">
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="/javascripts/index.js" defer></script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/stylesheets/index.css">
+    <script src="/socket.io/socket.io.js" defer></script>
+    <script src="/javascripts/index.js" defer></script>
 </head>
-
 <body>
-  <div id="connections"></div>
-  <canvas id="canvas"></canvas>
+<div id="connections"></div>
+<canvas id="canvas"></canvas>
+<div class="information">
+    <p id="status">
+        Waiting for microphone permission.
+    </p>
+    <div class="settings">
+        <p id="peer-username" class="settings-profile">X</p>
+        <div class="settings-options">
+            <a class="settings-button" href="/settings">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -4 24 24" width="24" height="24"
+                     preserveAspectRatio="xMinYMin">
+                    <path d="M9 12V1a1 1 0 1 1 2 0v11h1a1 1 0 0 1 0 2h-1v1a1 1 0 0 1-2 0v-1H8a1 1 0 0 1 0-2h1zm7-10V1a1 1 0 0 1 2 0v1h1a1 1 0 0 1 0 2h-1v11a1 1 0 0 1-2 0V4h-1a1 1 0 0 1 0-2h1zM4 5h1a1 1 0 1 1 0 2H4v8a1 1 0 0 1-2 0V7H1a1 1 0 1 1 0-2h1V1a1 1 0 1 1 2 0v4z"></path>
+                </svg>
+            </a>
+            <hr>
+            <button id="logout-button" class="settings-button" href="/logout">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-5 -3 24 24" width="24" height="24"
+                     preserveAspectRatio="xMinYMin">
+                    <path d="M3.414 7.828h5.642a1 1 0 1 1 0 2H3.414l1.122 1.122a1 1 0 1 1-1.415 1.414L.293 9.536a.997.997 0 0 1 0-1.415L3.12 5.293a1 1 0 0 1 1.415 1.414L3.414 7.828zM13 0a1 1 0 0 1 1 1v16a1 1 0 0 1-2 0V1a1 1 0 0 1 1-1z"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
 </body>
-
 </html>

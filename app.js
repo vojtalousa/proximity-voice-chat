@@ -41,6 +41,9 @@ app.get('/', (req, res) => {
 app.get('/login', (req, res) => {
   res.sendFile(`${__dirname}/pages/login.html`);
 });
+app.get('/settings', (req, res) => {
+  res.sendFile(`${__dirname}/pages/settings.html`);
+});
 
 const socketsList = {};
 io.on('connection', (socket) => {
@@ -52,8 +55,10 @@ io.on('connection', (socket) => {
     io.to(target).emit('signal', { sender: { id: socket.id, ...me }, data });
   });
   socket.on('movementChange', (movement) => {
-    socket.broadcast.emit('movementChange', { id: socket.id, movement });
-    socketsList[socket.id].movement = movement;
+    if (socketsList[socket.id]) {
+      socket.broadcast.emit('movementChange', { id: socket.id, movement });
+      socketsList[socket.id].movement = movement;
+    }
   });
   socket.on('disconnect', () => {
     socket.broadcast.emit('socketDisconnected', socket.id);

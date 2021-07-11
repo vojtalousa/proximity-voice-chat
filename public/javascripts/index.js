@@ -2,7 +2,9 @@
 const username = localStorage.getItem('username');
 const color = localStorage.getItem('color');
 if (!username || !color) window.location.replace('/login');
+document.getElementById('peer-username').innerText = username[0].toUpperCase();
 
+const statusText = document.getElementById('status');
 const PERCENT_LENGTH = 5;
 const SPEED = 150;
 const socket = io();
@@ -41,10 +43,12 @@ function createRTCConn(peer) {
   };
   newConn.ontrack = (e) => handleStream(e, peer.id);
   peerConnections[peer.id] = { RTCConn: newConn, ...peer };
+  statusText.innerHTML = `<span class="num-connected">${Object.keys(peerConnections).length}</span> Connected`;
   return newConn;
 }
 
 navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+  statusText.innerHTML = 'Waiting for a connection.';
   audioStream = stream;
   socket.emit('ready', me);
   socket.on('movementChange', ({ id, movement }) => {
@@ -97,6 +101,7 @@ window.addEventListener('keyup', (e) => {
 });
 
 socket.on('socketsList', (list) => {
+  console.log('a');
   Object.keys(list).forEach(async (peerId) => {
     const newConn = createRTCConn(list[peerId]);
     const desc = await newConn.createOffer({ offerToReceiveAudio: 1 });
@@ -134,6 +139,8 @@ socket.on('socketDisconnected', (socketId) => {
   document.getElementById(socketId).remove();
   peerConnections[socketId].RTCConn.close();
   delete peerConnections[socketId];
+  const peerConnNum = Object.keys(peerConnections).length;
+  statusText.innerHTML = peerConnNum > 0 ? `<span class="num-connected">${peerConnNum}</span> Connected` : 'Waiting for a connection';
   shouldUpdateCanvas = true;
 });
 
@@ -239,3 +246,10 @@ function renderCanvas() {
   requestAnimationFrame(renderCanvas);
 }
 renderCanvas();
+
+const logoutButton = document.getElementById('logout-button');
+logoutButton.onclick = () => {
+  delete localStorage.username;
+  delete localStorage.color;
+  window.location.reload();
+};

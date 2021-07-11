@@ -19,17 +19,83 @@ html {
     background-size: 35px 35px;
     width: 100%;
     height: 100%;
+    .login-div {
+      background-color: white;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 95%;
+      width: 350px;
+      input[type=text] {
+        font-size: 16px;
+        font-weight: 400;
+        border: solid 2px #D0D4E0;
+        padding: 12px;
+        width: calc(100% - 40px);
+        margin-left: 20px;
+        border-radius: 8px;
+
+        &:focus {
+          border-color: #2259FF;
+          outline: none;
+        }
+        &::placeholder {
+          color: #D0D4E0;
+          font-size: 16px;
+        }
+      }
+
+      .login-btn {
+        border-radius: 0 0 10px 10px;
+        background-color: white;
+        font-weight: 400;
+        font-size: 18px;
+        cursor: pointer;
+        margin-top: 20px;
+        display: block;
+        padding: 15px 0 15px 20px;
+        border: 0;
+        border-top: solid 3px #F2F3F6;
+        width: 100%;
+        text-align: left;
+        color: #2259FF;
+
+        &:active {
+          outline: none;
+          transform: scale(1.03);
+        }
+      }
+
+      input[type=range] {
+        -webkit-appearance: none;
+        width: calc(100% - 40px);
+        margin-left: 20px;
+        height: 5px;
+        border-radius: 100vmax;
+        background: url("/images/gradient.png");
+        outline: none;
+        -webkit-transition: .2s;
+        transition: opacity .2s;
+        @mixin thumb-style {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          outline: white solid 4px;
+          cursor: pointer;
+        }
+        &::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          @include thumb-style
+        }
+        &::-moz-range-thumb {
+          @include thumb-style
+        }
+      }
+
+    }
   }
-}
-
-
-.login-div {
-  background-color: white;
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  max-width: 95%;
 }
 
 h1 {
@@ -37,43 +103,9 @@ h1 {
   font-weight: 700;
 }
 
-input {
-  font-size: 16px;
-  font-weight: 400;
-  border: solid 2px #D0D4E0;
-  padding: 12px;
-  width: calc(100% - 40px);
-  margin-left: 20px;
-  border-radius: 8px;
-
-  &:focus {
-    border-color: #2259FF;
-    outline: none;
-  }
+h2 {
+  padding: 20px 20px 10px;
+  font-size: 20px;
+  font-weight: 500;
 }
 
-::placeholder {
-  color: #D0D4E0;
-  font-size: 16px;
-}
-
-.login-btn {
-  border-radius: 0 0 10px 10px;
-  background-color: white;
-  font-weight: 400;
-  font-size: 18px;
-  cursor: pointer;
-  margin-top: 20px;
-  display: block;
-  padding: 15px 0 15px 20px;
-  border: 0;
-  border-top: solid 3px #F2F3F6;
-  width: 100%;
-  text-align: left;
-  color: #2259FF;
-
-  &:active {
-    outline: none;
-    transform: scale(1.03);
-  }
-}
