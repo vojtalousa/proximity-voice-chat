@@ -22,29 +22,41 @@ app.use(sassMiddleware({
   sourceMap: true,
 }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res, next) => {
+  console.log(process.env.NODE_ENV);
+  if (process.env.NODE_ENV === 'production') {
+    req.secure ? next() : res.redirect(`https://${req.headers.host}${req.url}`);
+  } else {
+    next();
+  }
+});
 
 const server = http.createServer(app);
 const listener = server.listen(port);
 const io = socketio(listener);
 
-let socketsList = [];
+app.get('/', (req, res) => {
+  res.sendFile(`${__dirname}/pages/index.html`);
+});
+app.get('/login', (req, res) => {
+  res.sendFile(`${__dirname}/pages/login.html`);
+});
+
+const socketsList = {};
 io.on('connection', (socket) => {
-  socket.on('ready', () => {
+  socket.on('ready', (peer) => {
     socket.emit('socketsList', socketsList);
-    socketsList.push(socket.id);
+    socketsList[socket.id] = { id: socket.id, ...peer };
   });
-  socket.on('signal', ({ target, data }) => {
-    io.to(target).emit('signal', { senderId: socket.id, data });
+  socket.on('signal', ({ target, data, me }) => {
+    io.to(target).emit('signal', { sender: { id: socket.id, ...me }, data });
+  });
+  socket.on('movementChange', (movement) => {
+    socket.broadcast.emit('movementChange', { id: socket.id, movement });
+    socketsList[socket.id].movement = movement;
   });
   socket.on('disconnect', () => {
     socket.broadcast.emit('socketDisconnected', socket.id);
-    socketsList = socketsList.filter((socketId) => socketId !== socket.id);
+    delete socketsList[socket.id];
   });
-  // socket.on('gotMicAccess', () => {
-  //   socket.broadcast.emit('someonejoined', { socketid: socket.id });
-  // });
-  // socket.on('signal', ({ me, target, data }) => {
-  //   console.log(me, target);
-  //   socket.broadcast.emit('signal', { targetguid: target.guid, sender: me, data });
-  // });
 });
