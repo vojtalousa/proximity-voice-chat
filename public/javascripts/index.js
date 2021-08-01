@@ -17,6 +17,7 @@ const me = {
     position: { x: 0, y: 0 },
   },
 };
+const screenPos = { x: 0, y: 0 };
 let audioStream;
 let framerate = 0;
 let adjustedSpeed = SPEED / framerate;
@@ -174,11 +175,6 @@ function calculatePeerPositions() { // reposition peers based on their velocitie
     posX += velX * adjustedSpeed;
     posY += velY * adjustedSpeed;
 
-    // don't allow peers to exit out of screen
-    if (posX > c.width) posX = c.width;
-    else if (posX < 0) posX = 0;
-    if (posY > c.height) posY = c.height;
-    else if (posY < 0) posY = 0;
     if (posX !== origPosX || posY !== origPosY) {
       el.movement.position = { x: posX, y: posY };
       shouldUpdateCanvas = true;
@@ -186,19 +182,53 @@ function calculatePeerPositions() { // reposition peers based on their velocitie
   });
 }
 
+function changeScreenPosition() {
+  const lerp = (x, y, a) => x * (1 - a) + y * a;
+  const wantedScreenX = me.movement.position.x - window.innerWidth / 2;
+  const wantedScreenY = me.movement.position.y - window.innerHeight / 2;
+  screenPos.x = lerp(screenPos.x, wantedScreenX, 0.02);
+  screenPos.y = lerp(screenPos.y, wantedScreenY, 0.02);
+  if (Math.abs(wantedScreenX - screenPos.x) > 5 || Math.abs(wantedScreenY - screenPos.y) > 5) {
+    shouldUpdateCanvas = true;
+  }
+}
+
+const patternCanvas = document.createElement('canvas');
+patternCanvas.width = 35;
+patternCanvas.height = 35;
+const patternCtx = patternCanvas.getContext('2d');
+patternCtx.fillStyle = '#F2F3F6';
+patternCtx.fillRect(0, 0, patternCanvas.width, patternCanvas.height);
+patternCtx.beginPath();
+patternCtx.arc(5, 5, 5, 0, 2 * Math.PI);
+patternCtx.fillStyle = '#EDEFF2';
+patternCtx.fill();
+patternCtx.closePath();
+document.body.appendChild(patternCanvas);
+const pattern = ctx.createPattern(patternCanvas, 'repeat');
+
+changeScreenPosition();
 function renderCanvas() {
   updateFramerate();
   calculatePeerPositions();
   if (shouldUpdateCanvas) {
     shouldUpdateCanvas = false;
-    ctx.clearRect(0, 0, c.width, c.height);
+    changeScreenPosition();
+    ctx.save();
+    ctx.fillStyle = pattern;
+    ctx.translate((screenPos.x % 35) * -1, (screenPos.y % 35) * -1);
+    ctx.fillRect(-35, -35, c.width + 35 * 2, c.height + 35 * 2);
+    ctx.restore();
+    const meX = me.movement.position.x - screenPos.x;
+    const meY = me.movement.position.y - screenPos.y;
     [...Object.values(peerConnections), me].forEach((el) => {
       const { x, y } = el.movement.position;
-
+      const adjustedX = x - screenPos.x;
+      const adjustedY = y - screenPos.y;
       if (el.id !== me.id) {
         // calculate and adjust peer volume
         const peerElement = document.getElementById(el.id);
-        const distance = Math.hypot(x - me.movement.position.x, y - me.movement.position.y);
+        const distance = Math.hypot(adjustedX - meX, adjustedY - meY);
         let percentage = 100 - distance / PERCENT_LENGTH;
         if (percentage <= 0) percentage = 0;
         if (peerElement) peerElement.volume = percentage / 100;
@@ -209,8 +239,8 @@ function renderCanvas() {
 
         // render the line between peers
         ctx.beginPath();
-        ctx.moveTo(me.movement.position.x, me.movement.position.y);
-        ctx.lineTo(x, y);
+        ctx.moveTo(meX, meY);
+        ctx.lineTo(adjustedX, adjustedY);
         ctx.strokeStyle = `rgba(112, 112, 112, ${percentage / 100})`;
         ctx.lineWidth = 1;
         ctx.stroke();
@@ -221,7 +251,7 @@ function renderCanvas() {
       ctx.beginPath();
       ctx.shadowBlur = 30;
       ctx.shadowColor = el.color;
-      ctx.arc(x, y, 20, 0, 2 * Math.PI);
+      ctx.arc(adjustedX, adjustedY, 20, 0, 2 * Math.PI);
       ctx.fillStyle = el.color;
       ctx.fill();
       ctx.closePath();
@@ -232,12 +262,12 @@ function renderCanvas() {
 
       // the fix is needed to center text inside circles with canvas
       const fix = ctx.measureText(el.username[0].toUpperCase()).actualBoundingBoxDescent / 2;
-      ctx.fillText(el.username[0].toUpperCase(), x, y - fix);
+      ctx.fillText(el.username[0].toUpperCase(), adjustedX, adjustedY - fix);
     });
 
     // render the border of this peer
     ctx.beginPath();
-    ctx.arc(me.movement.position.x, me.movement.position.y, 20, 0, 2 * Math.PI);
+    ctx.arc(meX, meY, 20, 0, 2 * Math.PI);
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 3;
     ctx.stroke();
