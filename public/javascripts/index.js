@@ -4,11 +4,13 @@ const color = localStorage.getItem('color');
 if (!username || !color) window.location.replace('/login');
 document.getElementById('peer-username').innerText = username[0].toUpperCase();
 
-const statusText = document.getElementById('status');
 const PERCENT_LENGTH = 5;
 const SPEED = 150;
+const BACKGROUND_SPACING = 35;
+const BACKGROUND_DOT_SIZE = 5;
+
 const socket = io();
-const peerConnections = {};
+const peers = {};
 const me = {
   username,
   color,
@@ -18,11 +20,15 @@ const me = {
   },
 };
 const screenPos = { x: 0, y: 0 };
+const statusText = document.getElementById('status');
+
 let audioStream;
 let framerate = 0;
 let adjustedSpeed = SPEED / framerate;
 let lastTime = performance.now();
 let shouldUpdateCanvas = true;
+
+/* WEBRTC CONNECTION */
 
 function handleStream(RTCStream, socketId) {
   const stream = RTCStream.streams[0];
@@ -43,8 +49,8 @@ function createRTCConn(peer) {
     socket.emit('signal', { target: peer.id, data: { type: 'candidate', candidate: event.candidate }, me });
   };
   newConn.ontrack = (e) => handleStream(e, peer.id);
-  peerConnections[peer.id] = { RTCConn: newConn, ...peer };
-  statusText.innerHTML = `<span class="num-connected">${Object.keys(peerConnections).length}</span> Connected`;
+  peers[peer.id] = { RTCConn: newConn, ...peer };
+  statusText.innerHTML = `<span class="num-connected">${Object.keys(peers).length}</span> Connected`;
   return newConn;
 }
 
@@ -53,8 +59,8 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
   audioStream = stream;
   socket.emit('ready', me);
   socket.on('movementChange', ({ id, movement }) => {
-    if (peerConnections[id]) {
-      peerConnections[id].movement = movement;
+    if (peers[id]) {
+      peers[id].movement = movement;
     }
   });
 }).catch((err) => {
@@ -62,6 +68,9 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
   console.error(err);
 });
 
+/* MOVEMENT */
+
+// add velocity in direction of keypress
 window.addEventListener('keydown', (e) => {
   if (!e.repeat) {
     switch (e.code) {
@@ -101,8 +110,9 @@ window.addEventListener('keyup', (e) => {
   socket.emit('movementChange', me.movement);
 });
 
+/* SOCKET COMMUNICATION */
+
 socket.on('socketsList', (list) => {
-  console.log('a');
   Object.keys(list).forEach(async (peerId) => {
     const newConn = createRTCConn(list[peerId]);
     const desc = await newConn.createOffer({ offerToReceiveAudio: 1 });
@@ -112,22 +122,23 @@ socket.on('socketsList', (list) => {
 });
 
 socket.on('signal', async ({ sender, data }) => {
-  if (!peerConnections[sender.id]) createRTCConn(sender);
+  const peer = peers[sender.id];
+  if (!peer) createRTCConn(sender);
 
   switch (data.type) {
     case 'candidate': {
-      await peerConnections[sender.id].RTCConn.addIceCandidate(data.candidate);
+      await peer.RTCConn.addIceCandidate(data.candidate);
       break;
     }
     case 'offer': {
-      await peerConnections[sender.id].RTCConn.setRemoteDescription(data.offer);
-      const answerDesc = await peerConnections[sender.id].RTCConn.createAnswer({ offerToReceiveAudio: 1 });
-      await peerConnections[sender.id].RTCConn.setLocalDescription(answerDesc);
+      await peer.RTCConn.setRemoteDescription(data.offer);
+      const answerDesc = await peer.RTCConn.createAnswer({ offerToReceiveAudio: 1 });
+      await peer.RTCConn.setLocalDescription(answerDesc);
       socket.emit('signal', { target: sender.id, data: { type: 'answer', desc: answerDesc }, me });
       break;
     }
     case 'answer': {
-      await peerConnections[sender.id].RTCConn.setRemoteDescription(data.desc);
+      await peer.RTCConn.setRemoteDescription(data.desc);
       break;
     }
     default: {
@@ -138,26 +149,24 @@ socket.on('signal', async ({ sender, data }) => {
 
 socket.on('socketDisconnected', (socketId) => {
   document.getElementById(socketId).remove();
-  peerConnections[socketId].RTCConn.close();
-  delete peerConnections[socketId];
-  const peerConnNum = Object.keys(peerConnections).length;
+  peers[socketId].RTCConn.close();
+  delete peers[socketId];
+  const peerConnNum = Object.keys(peers).length;
   statusText.innerHTML = peerConnNum > 0 ? `<span class="num-connected">${peerConnNum}</span> Connected` : 'Waiting for a connection';
   shouldUpdateCanvas = true;
 });
 
-const c = document.getElementById('canvas');
-const ctx = c.getContext('2d');
+/* CANVAS RENDERING */
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
 function resizeCanvas() {
   shouldUpdateCanvas = true;
-  c.width = window.innerWidth;
-  c.height = window.innerHeight;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 }
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
 
-// updates the speed of peers according to the framerate, so they always move at the
-// same speed, regardless of framerate
 function updateFramerate() {
   const deltaTime = performance.now() - lastTime;
   lastTime = performance.now();
@@ -165,23 +174,22 @@ function updateFramerate() {
   adjustedSpeed = SPEED / framerate;
 }
 
-function calculatePeerPositions() { // reposition peers based on their velocities
-  [me, ...Object.values(peerConnections)].forEach((el) => {
-    let {
-      position: { x: posX, y: posY },
-      velocity: { x: velX, y: velY },
-    } = el.movement;
-    const [origPosX, origPosY] = [posX, posY];
+// reposition peers based on their velocities
+function calculatePeerPositions() {
+  [me, ...Object.values(peers)].forEach((el) => {
+    const { x: velX, y: velY } = el.movement.velocity;
+    let { x: posX, y: posY } = el.movement.position;
     posX += velX * adjustedSpeed;
     posY += velY * adjustedSpeed;
 
-    if (posX !== origPosX || posY !== origPosY) {
+    if (velX !== 0 || velY !== 0) {
       el.movement.position = { x: posX, y: posY };
       shouldUpdateCanvas = true;
     }
   });
 }
 
+// move the screen so that the controlled peer is in the center
 function changeScreenPosition() {
   const lerp = (x, y, a) => x * (1 - a) + y * a;
   const wantedScreenX = me.movement.position.x - window.innerWidth / 2;
@@ -193,35 +201,44 @@ function changeScreenPosition() {
   }
 }
 
+// create the repeating background pattern
 const patternCanvas = document.createElement('canvas');
-patternCanvas.width = 35;
-patternCanvas.height = 35;
+patternCanvas.width = BACKGROUND_SPACING;
+patternCanvas.height = BACKGROUND_SPACING;
 const patternCtx = patternCanvas.getContext('2d');
 patternCtx.fillStyle = '#F2F3F6';
 patternCtx.fillRect(0, 0, patternCanvas.width, patternCanvas.height);
 patternCtx.beginPath();
-patternCtx.arc(5, 5, 5, 0, 2 * Math.PI);
+patternCtx.arc(BACKGROUND_DOT_SIZE, BACKGROUND_DOT_SIZE, BACKGROUND_DOT_SIZE, 0, 2 * Math.PI);
 patternCtx.fillStyle = '#EDEFF2';
 patternCtx.fill();
 patternCtx.closePath();
 document.body.appendChild(patternCanvas);
 const pattern = ctx.createPattern(patternCanvas, 'repeat');
 
+window.addEventListener('resize', resizeCanvas);
 changeScreenPosition();
+resizeCanvas();
 function renderCanvas() {
   updateFramerate();
   calculatePeerPositions();
   if (shouldUpdateCanvas) {
     shouldUpdateCanvas = false;
     changeScreenPosition();
+
+    // render background
     ctx.save();
     ctx.fillStyle = pattern;
-    ctx.translate((screenPos.x % 35) * -1, (screenPos.y % 35) * -1);
-    ctx.fillRect(-35, -35, c.width + 35 * 2, c.height + 35 * 2);
+    ctx.translate((screenPos.x % BACKGROUND_SPACING) * -1, (screenPos.y % BACKGROUND_SPACING) * -1);
+    ctx.fillRect(BACKGROUND_SPACING * -1, BACKGROUND_SPACING * -1, canvas.width + BACKGROUND_SPACING * 2, canvas.height + BACKGROUND_SPACING * 2);
     ctx.restore();
+
     const meX = me.movement.position.x - screenPos.x;
     const meY = me.movement.position.y - screenPos.y;
-    [...Object.values(peerConnections), me].forEach((el) => {
+
+    // render all of the peers
+    [...Object.values(peers), me].forEach((el) => {
+      console.log(el.movement.position);
       const { x, y } = el.movement.position;
       const adjustedX = x - screenPos.x;
       const adjustedY = y - screenPos.y;
@@ -233,7 +250,7 @@ function renderCanvas() {
         if (percentage <= 0) percentage = 0;
         if (peerElement) peerElement.volume = percentage / 100;
         else {
-          console.warn(`Peer ${el.id} is missing!`);
+          // console.warn(`Peer ${el.id} is missing!`);
           return;
         }
 
@@ -277,6 +294,7 @@ function renderCanvas() {
 }
 renderCanvas();
 
+// make the logout button functional
 const logoutButton = document.getElementById('logout-button');
 logoutButton.onclick = () => {
   delete localStorage.username;

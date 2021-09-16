@@ -1,38 +1,34 @@
 * {
+  margin: 0;
+  padding: 0;
+  font-family: 'Open Sans', sans-serif;
+  color: #110D25;
   transition: 0.2s;
 }
 
 body {
-  padding: 0;
-  margin: 0;
   overflow: hidden;
-  font: 14px "Open Sans", sans-serif;
   width: 100%;
   height: 100%;
   background: radial-gradient(#EDEFF2 4px, transparent 5px), #F2F3F6;
   background-size: 35px 35px;
-
   #connections {
     display: none;
   }
-
   #canvas {
     z-index: -1;
     width: 100%;
     height: 100%;
     position: absolute;
   }
-
   .information {
     display: flex;
     justify-content: space-between;
     padding: 35px;
-
     #status {
       font-weight: 700;
       font-size: 22px;
       margin: 0;
-
       .num-connected {
         display: inline-block;
         color: white;
@@ -44,14 +40,12 @@ body {
         text-align: center;
       }
     }
-
     .settings {
       height: 200px;
       width: 75px;
       background-color: white;
       border-radius: 999999px;
       overflow: hidden;
-
       .settings-profile {
         position: relative;
         left: -4px;
@@ -66,7 +60,6 @@ body {
         border: #F2F3F6 4px solid;
         border-radius: 9999px;
       }
-
       .settings-options {
         position: relative;
         top: -5px;

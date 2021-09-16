@@ -23,7 +23,6 @@ app.use(sassMiddleware({
 }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use((req, res, next) => {
-  console.log(process.env.NODE_ENV);
   if (process.env.NODE_ENV === 'production') {
     req.secure ? next() : res.redirect(`https://${req.headers.host}${req.url}`);
   } else {
